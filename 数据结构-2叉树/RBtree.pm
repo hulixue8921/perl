@@ -599,6 +599,7 @@ sub del {
     my $x=shift;
     return 0 unless $x;
     &Del ($self->{tree} , $x);
+    $self->{tree}=$Tree;
 }
 
 1
