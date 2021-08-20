@@ -1,0 +1,56 @@
+ input {
+     file {
+                type => "www_nginx"
+                path => ["/yiben/logs/nginx_access.log"]
+                start_position => "beginning"
+                sincedb_path => "/dev/null"
+        }
+  }
+
+
+ filter {
+
+	 grok {
+		 match => {
+                    message => '%{IPORHOST:clientip}, %{IPORHOST:clientip} - %{NOTSPACE:remote_user} \[%{HTTPDATE:timestamp}\] \"(?:%{WORD:verb} %{NOTSPACE:request}(?: HTTP/%{NUMBER:httpversion})?|%{DATA:rawrequest})\" %{NUMBER:response} (?:%{NUMBER:bytes}|-) %{QS:referrer} %{QS:agent} %{NOTSPACE:http_x_forwarded_for} %{NUMBER:request_length} %{NUMBER:request_time} (?:%{NUMBER:upstream_response_time}|-)' 
+		 }
+	 }
+         useragent {
+             source => 'agent'
+             target => 'useragent'
+
+         }
+         geoip {
+             source => 'clientip'
+             database => '/root/GeoLite2-City_20190416/GeoLite2-City.mmdb'
+             #default_database_type => 'ASN'
+         }
+
+	 date {
+		 match => [ "timestamp" , "dd/MMM/YYYY:HH:mm:ss Z" ]
+	 }
+         mutate {
+            convert =>{bytes => 'float'}
+            convert =>{response=>'float'}
+            convert =>{request_length => 'float' }
+            convert =>{upstream_response_time => 'float'}
+            convert =>{"request_time"=>"float"}
+            convert =>{"uid"=>'float'}
+            remove_field =>['agent', 'timestamp']
+         }
+
+         
+}
+
+
+output {
+    #    stdout { codec => rubydebug }
+	elasticsearch {
+		action => "index"
+			hosts  => "101.200.86.251:9200"
+			index => "nginx"
+	}
+}
+
+
+
